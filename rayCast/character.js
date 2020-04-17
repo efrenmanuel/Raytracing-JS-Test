@@ -4,7 +4,8 @@ class Character {
         this.angle = 0;
         this.fov = fov;
         this.rays = this.calculateVision(detail);
-        this.lightPower=10
+        this.lightPower = 10
+        this.simple = true;
     }
 
     show(detail, walls) {
@@ -15,10 +16,12 @@ class Character {
         pop();
 
 
-        for (let ray = 0; ray < this.rays.length; ray++) {
+        for (let ray = 0; ray < this.rays.length; ray++) { //For each column
             let result = this.isIntersecting(this.rays[ray], walls);
             let pt = result[0];
-            let colorWall = result[1];
+            let wall = result[1];
+            let hitt = result[2];
+            let pixelSize = (width / detail);
             //console.log(pt);
             if (pt) {
                 stroke(150, 150, 150);
@@ -26,24 +29,37 @@ class Character {
                 line(this.pos.x + this.rays[ray].x * 10, this.pos.y + this.rays[ray].y * 10, pt.x, pt.y);
                 pop()
 
-                let distance = pt.z ;
-                let maxDistance = sqrt(height*height+width*width);
+                let distance = pt.z;
+                let maxDistance = sqrt(height * height + width * width);
 
-                let maxAttenuation=100;
-                let attenuation=(distance*10/this.lightPower)*maxAttenuation/maxDistance;
-                //console.log(attenuation);
-                let colorDistanced=color(red(colorWall)-attenuation, green(colorWall)-attenuation, blue(colorWall)-attenuation);
-                stroke(colorDistanced);
-                fill(colorDistanced);
-                push();
-                
-                // let size=(maxDistance-distance)*height/maxDistance; overcomplicated and bad
-                let size=height/(distance/20);
-                rect(ray * (width / detail),height+(height-size)/2, width / detail,size);
+                let maxAttenuation = 100;
+                let attenuation = (distance * 10 / this.lightPower) * maxAttenuation / maxDistance;
+                let size = height / (distance / 20);
+                if (!this.simple) {
+                    for (let pixel = 0; pixel * pixelSize < size; pixel++) {
+                        let colorPixel = wall.getColor(pixel, size / pixelSize, hitt);
+                        //console.log(attenuation);
+                        let colorDistanced = color(red(colorPixel) - attenuation, green(colorPixel) - attenuation, blue(colorPixel) - attenuation);
+                        stroke(colorDistanced);
+                        fill(colorDistanced);
+                        push();
 
-                
-                //line(ray, height + ((height - distance) / 2), ray, height + ((height - distance) / 2) + distance);
-                pop();
+
+                        rect(ray * pixelSize, height + (height - size) / 2 + pixel * pixelSize, pixelSize, pixelSize);
+
+
+                        //line(ray, height + ((height - distance) / 2), ray, height + ((height - distance) / 2) + distance);
+                        pop();
+                    }
+                } else {
+                    let colorWall=wall.wallColor;
+                    let colorDistanced = color(red(colorWall) - attenuation, green(colorWall) - attenuation, blue(colorWall) - attenuation);
+                    stroke(colorDistanced);
+                    fill(colorDistanced);
+                    push();
+                    rect(ray * (width / detail),height+(height-size)/2, width / detail,size);
+                    pop();
+                }
             }
 
 
@@ -79,7 +95,8 @@ class Character {
         if (ray.x == 1) {
             //console.log(ray);
         }
-        let colorWall = color(0);
+        let hitWall = undefined;
+        let hitt = undefined;
         for (let wall of walls) {
 
             let x1 = wall.p1.x;
@@ -99,24 +116,25 @@ class Character {
 
 
             if (0 < t && t < 1 && 0 < u && u < lowest) {
+                hitt = t;
                 lowest = u;
                 //console.log(u, t,lowest);
                 //calculate Distance from camera plane:
                 let cameraPlaneAngle = this.angle - 90;
-                let camera = new Wall(this.pos.x-p5.Vector.fromAngle(radians(cameraPlaneAngle)).x * 10, this.pos.y- p5.Vector.fromAngle(radians(cameraPlaneAngle)).y * 10, this.pos.x + p5.Vector.fromAngle(radians(cameraPlaneAngle)).x * 10, this.pos.y + p5.Vector.fromAngle(radians(cameraPlaneAngle)).y * 10, 255);
+                let camera = new Wall(this.pos.x - p5.Vector.fromAngle(radians(cameraPlaneAngle)).x * 10, this.pos.y - p5.Vector.fromAngle(radians(cameraPlaneAngle)).y * 10, this.pos.x + p5.Vector.fromAngle(radians(cameraPlaneAngle)).x * 10, this.pos.y + p5.Vector.fromAngle(radians(cameraPlaneAngle)).y * 10, 255);
                 camera.show();
                 point = createVector(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
                 point.z = this.calculateDistance(camera, point);
-                colorWall = wall.wallColor;
+                hitWall = wall;
                 //colorWall=this.calculateDistance(camera, point);
             }
 
         }
         if (point == null) {
-            console.log(ray);
+            //console.log(ray);
         }
 
-        return [point, colorWall];
+        return [point, hitWall, hitt];
     }
 
     calculateDistance(camera, collision) {
@@ -128,7 +146,7 @@ class Character {
         let x0 = collision.x;
         let y0 = collision.y;
 
-        let distance=abs((y2-y1)*x0-(x2-x1)*y0+x2*y1-y2*x1)/sqrt(pow(y2-y1,2)+pow(x2-x1,2))
+        let distance = abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1) / sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2))
         return distance;
     }
 
@@ -137,8 +155,8 @@ class Character {
 
         this.pos.y += cos(radians(-this.angle + 90)) * 2 * walk;
 
-        this.pos.x += sin(radians(-this.angle )) * 2 * strafe;
+        this.pos.x += sin(radians(-this.angle)) * 2 * strafe;
 
-        this.pos.y += cos(radians(-this.angle )) * 2 * strafe;
+        this.pos.y += cos(radians(-this.angle)) * 2 * strafe;
     }
 }

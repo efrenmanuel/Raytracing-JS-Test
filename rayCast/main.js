@@ -19,6 +19,8 @@ let strafing = 0;
 let fov = 90;
 let sliderFOV;
 
+let simpleRender;
+
 let detail = 50;
 let sliderDetail;
 
@@ -32,10 +34,9 @@ function setup() {
     walls.push(new Wall(0, 0, width, 0, color(255)));
     walls.push(new Wall(width, height, 0, height, color(255)));
     walls.push(new Wall(width, height, width, 0, color(255)));
-
     for (let wall = 0; wall < 5; wall++) {
         walls.push(new Wall(random(width), random(height), random(width), random(height), color(random(100) + 125, random(100) + 125, random(100) + 125)));
-        console.log(walls[walls.length - 1]);
+        //(walls[walls.length - 1]);
     }
     createP("FOV");
     sliderFOV = createSlider(1, 360, fov);
@@ -52,9 +53,16 @@ function setup() {
 
     sliderLight.input(changeLight);
 
+    simpleRender=createCheckbox("Simple Render", true);
+    simpleRender.changed(simple);
 
     character = new Character(10, 10, fov);
     frameRate(30);
+}
+
+function simple(){
+    console.log(simpleRender.checked());
+    character.simple=simpleRender.checked();
 }
 
 function changeLight() {
@@ -98,8 +106,6 @@ function draw() {
     };
 
     cursor
-
-
 
 
     character.show(detail, walls);
